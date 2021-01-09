@@ -1,0 +1,632 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+ 
+  ENVName:
+    Description: Please enter the environment name
+    Type: String
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.60.0.0/16
+
+Conditions:
+  NCCondition: !Equals [!Ref 'AWS::Region', 'us-west-1']
+    
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName} 
+            - "vpc"
+            - !Sub ${AWS::Region}     
+
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName} 
+            - "vpc"
+            - !Sub ${AWS::Region}
+            - "igw"  
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  DMZPubSub1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pub-dmz-sub" 
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'          
+
+
+  DMZPubSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [1, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pub-dmz-sub" 
+            - !Select 
+              - 1
+              - Fn::GetAZs: !Ref 'AWS::Region'            
+
+  DMZPubSub3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::If:
+        - NCCondition
+        - !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+        - !Select 
+          - 2
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [2, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pub-dmz-sub" 
+            - Fn::If:
+              - NCCondition
+              - !Select 
+                - 0
+                - Fn::GetAZs: !Ref 'AWS::Region'
+              - !Select 
+                - 2
+                - Fn::GetAZs: !Ref 'AWS::Region'         
+
+  DMZPubSub4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [3, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pub-dmz-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'                  
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [4, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-web-sub"
+            - !Select 
+              - 1
+              - Fn::GetAZs: !Ref 'AWS::Region'          
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [5, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-web-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'          
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::If:
+        - NCCondition
+        - !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+        - !Select 
+          - 2
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [6, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-web-sub"
+            - Fn::If:
+              - NCCondition
+              - !Select 
+                - 0
+                - Fn::GetAZs: !Ref 'AWS::Region'
+              - !Select 
+                - 2
+                - Fn::GetAZs: !Ref 'AWS::Region'          
+
+  PrivateSubnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [7, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-web-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'                  
+
+  PrivateSubnet5:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [8, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-services-sub"
+            - !Select 
+              - 1
+              - Fn::GetAZs: !Ref 'AWS::Region'            
+
+  PrivateSubnet6:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [9, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-services-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'
+           
+
+  PrivateSubnet7:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::If:
+        - NCCondition
+        - !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+        - !Select 
+          - 2
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [10, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-services-sub"
+            - Fn::If:
+              - NCCondition
+              - !Select 
+                - 0
+                - Fn::GetAZs: !Ref 'AWS::Region'
+              - !Select 
+                - 2
+                - Fn::GetAZs: !Ref 'AWS::Region'
+           
+
+  PrivateSubnet8:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [11, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-services-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'
+                  
+
+  PrivateSubnet9:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [12, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-data-sub"
+            - !Select 
+              - 1
+              - Fn::GetAZs: !Ref 'AWS::Region'
+           
+
+  PrivateSubnet10:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [13, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-data-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'
+            
+
+  PrivateSubnet11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::If:
+        - NCCondition
+        - !Select 
+          - 1
+          - Fn::GetAZs: !Ref 'AWS::Region'
+        - !Select 
+          - 2
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [14, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-data-sub"
+            - Fn::If:
+              - NCCondition
+              - !Select 
+                - 0
+                - Fn::GetAZs: !Ref 'AWS::Region'
+              - !Select 
+                - 2
+                - Fn::GetAZs: !Ref 'AWS::Region'
+            
+
+  PrivateSubnet12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        !Select 
+          - 0
+          - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [15, !Cidr [!GetAtt VPC.CidrBlock, 256, 8]]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+          - '-'
+          - - !Sub ${ENVName}
+            - "vpc-pri-data-sub"
+            - !Select 
+              - 0
+              - Fn::GetAZs: !Ref 'AWS::Region'
+     
+                                
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref DMZPubSub1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ENVName}-vpc-dmz-route-table
+  
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  DMZPubSub1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref DMZPubSub1
+
+  DMZPubSub2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref DMZPubSub2
+
+  DMZPubSub3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref DMZPubSub3
+
+  DMZPubSub4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref DMZPubSub4    
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ENVName}-vpc-web-route-table
+     
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet2
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet3
+
+  PrivateSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet4    
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ENVName}-vpc-services-route-table
+  
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet5RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet5
+
+  PrivateSubnet6RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet6
+
+  PrivateSubnet7RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet7
+
+  PrivateSubnet8RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet8      
+
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ENVName}-vpc-data-route-table
+  
+
+  DefaultPrivateRoute3:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet9RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet9
+
+  PrivateSubnet10RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet10
+
+  PrivateSubnet11RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet11 
+
+  PrivateSubnet12RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet12                  
+
+Outputs:
+  VPC:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+      
+  VPCCidr:
+    Description: The ID of the VPC CIDR
+    Value: !Ref VpcCIDR   
+
+  DMZSubnets:
+    Description: A list of the DMZ subnets
+    Value:
+      !Join [
+        ",",
+        [!Ref DMZPubSub1, !Ref DMZPubSub2, !Ref DMZPubSub3, !Ref DMZPubSub4],
+      ]
+
+  ServicesSubnets:
+    Description: A list of the services subnets
+    Value:
+      !Join [
+        ",",
+        [!Ref PrivateSubnet5, !Ref PrivateSubnet6, !Ref PrivateSubnet7, !Ref PrivateSubnet8],
+      ]
+
+  DataSubnets:
+    Description: A list of the data subnets
+    Value:
+      !Join [
+        ",",
+        [!Ref PrivateSubnet9, !Ref PrivateSubnet10, !Ref PrivateSubnet11, !Ref PrivateSubnet12],
+      ]    
+
+  WebSubnets:
+    Description: A list of the web subnets
+    Value:
+      !Join [
+        ",",
+        [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3,!Ref PrivateSubnet4 ],
+      ]
+
